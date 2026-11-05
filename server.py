@@ -58,10 +58,16 @@ def get_ai_reply(user_message: str) -> str:
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": OPENAI_MODEL,
-                    "messages": [{"role": "user", "content": user_message}],
-                    "max_tokens": 200,
-                },
+    "model": OPENAI_MODEL,
+    "messages": [
+        {
+            "role": "system",
+            "content": "Anda adalah asisten PT Nusrava AI dalam bahasa Indonesia yang santai dan jujur. Jawab dengan singkat, jelas, dan sesuai konteks Indonesia."
+        },
+        {"role": "user", "content": user_message}
+    ],
+    "max_tokens": 200,
+},
                 timeout=30,
             )
             if r.status_code == 200:
