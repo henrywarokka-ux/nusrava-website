@@ -53,15 +53,13 @@ def get_ai_reply(user_message: str) -> str:
     if "kontak" in msg or "whatsapp" in msg or "telepon" in msg or "info" in msg:
         return "WhatsApp: 0822-3388-3288. Atau chat langsung ke saya! 📲"
     if "harga" in msg or "biaya" in msg:
-        return "Harga solusi solusi bervariasi tergantung kebutuhan Anda. Hubungi via WhatsApp biar bisa diskusikan detailnya. 🏷️"
+        return "Harga solusi bervariasi tergantung kebutuhan Anda. Hubungi via WhatsApp biar bisa diskusikan detailnya. 🏷️"
     if "terima kasih" in msg or "makasih" in msg or "thanks" in msg or "thank you" in msg:
         return "Sama-sama! 🙏 Ada yang lain?"
     if "jam" in msg or "buka" in msg or "tutup" in msg:
         return "Jam operasi: Senin–Jumat, 08.00–17.00 WIB. 📅"
     if "kantor" in msg or "alamat" in msg:
         return "Kantor kami di Surabaya, Jawa Timur, Indonesia."
-    if "nusrava" in msg and ("siapa" in msg or "who" in msg or "dimiliki" in msg or "punya" in msg or "owner" in msg or "pendiri" in msg or "founder" in msg):
-        return "Nusrava milik Henry Warokka — IT Professional. 🎯"
     if "apakah" in msg or "apa" in msg:
         return "Mau kita bahas layanan, kontak, jam operasi, atau struktur project-nya? Silakan tanya lagi."
     if "saya ingin" in msg or "ingin" in msg:
@@ -199,7 +197,7 @@ def chat():
         rate_log[user_id] = []
     rate_log[user_id] = [t for t in rate_log[user_id] if now - t < 60]
     if len(rate_log[user_id]) >= RATE_LIMIT:
-        return jsonify({"reply": "Terlalu banyak, masak. Tunggu sebentar ya, kemaren. ⏳"}), 429
+        return jsonify({"reply": "Sebentar Yaakkk!!, boss henry pakai server gratis \"GUE JADI LEMOT :(\""}), 429
     rate_log[user_id].append(now)
 
     # ---------- AI call ----------
