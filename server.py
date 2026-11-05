@@ -2,13 +2,13 @@
 # Endpoint: /chat
 #
 # Cara kerja:
-# - POST /chat  { "message": "helo", "user": "nama-orang" }
+# - POST /chat  { "message": "...", "user": "..." }
 # - Balasan dalam JSON: { "reply": "...", "role": "bot" }
 #
 # Integrasi AI:
 #   - Groq (gunakan OPENAI_API_KEY=*** API key)
 #   - Ollama (lokal)
-#   - Hugging Face (menggunakan HF_TOKEN)
+#   - Hugging Face (dengan HF_TOKEN)
 #
 # Cara deploy (pilih salah satu):
 #   - Render (free): dashboard Render > New Web Service > Connect repo
@@ -27,8 +27,8 @@ AI_PROVIDER = os.getenv("AI_PROVIDER", "groq")  # groq | ollama | hf | openai
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 HF_TOKEN = os.getenv("HF_TOKEN", "")
 HF_MODEL = os.getenv("HF_MODEL", "mistralai/Mistral-7B-Instruct-v0.3")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # API key provider AI (Groq, OpenAI)
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "llama-3.3-70b-versatile")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # Groq / OpenAI API key
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "openai/gpt-oss-20b")  # model Groq
 
 RATE_LIMIT = 5
 rate_log = {}  # user -> list of timestamps
@@ -44,26 +44,6 @@ def add_cors_headers(response):
 # ---------------- AI Reply Logic ----------------
 def get_ai_reply(user_message: str) -> str:
     msg = user_message.lower().strip()
-
-    # ---------- Reserved rules ----------
-    if any(k in msg for k in ["halo", "hi", "hai", "helo", "hallo"]):
-        return "Halo! 👋 Ada yang bisa saya bantu hari ini?"
-    if "layanan" in msg or "service" in msg:
-        return "Kami punya 6 layanan: website, aplikasi, jaringan, servis komputer, sistem parkir, dan sistem antrian. Mau dibahas salah satunya?"
-    if "kontak" in msg or "whatsapp" in msg or "telepon" in msg or "info" in msg:
-        return "WhatsApp: 0822-3388-3288. Atau chat langsung ke saya! 📲"
-    if "harga" in msg or "biaya" in msg:
-        return "Harga solusi bervariasi tergantung kebutuhan Anda. Hubungi via WhatsApp biar bisa diskusikan detailnya. 🏷️"
-    if "terima kasih" in msg or "makasih" in msg or "thanks" in msg or "thank you" in msg:
-        return "Sama-sama! 🙏 Ada yang lain?"
-    if "jam" in msg or "buka" in msg or "tutup" in msg:
-        return "Jam operasi: Senin–Jumat, 08.00–17.00 WIB. 📅"
-    if "kantor" in msg or "alamat" in msg:
-        return "Kantor kami di Surabaya, Jawa Timur, Indonesia."
-    if "apakah" in msg or "apa" in msg:
-        return "Mau kita bahas layanan, kontak, jam operasi, atau struktur project-nya? Silakan tanya lagi."
-    if "saya ingin" in msg or "ingin" in msg:
-        return "Baik! Kalau aplikasi/bisnis, langkah pertama: konsultasi → proposal → development → deployment & support. Mau dibahas bagian mana?"
 
     # ---------- Groq AI ----------
     if AI_PROVIDER == "groq":
