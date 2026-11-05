@@ -6,43 +6,34 @@
 # - Balasan dalam JSON: { "reply": "...", "role": "bot" }
 #
 # Integrasi AI:
-# - Ganti fungsi `get_ai_reply()` dengan provider AI kamu.
-# - Contoh provider yang bisa dipakai:
-#   1. Ollama (lokal) — no API key, jalankan `ollama serve` dulu
-#   2. Hugging Face Inference API — gratis, minta token di huggingface.co
-#   3. OpenAI / Groq / dsb — minta API key
+#   - Groq (gunakan OPENAI_API_KEY=*** API key)
+#   - Ollama (lokal)
+#   - Hugging Face (menggunakan HF_TOKEN)
 #
 # Cara deploy (pilih salah satu):
 #   - Render (free): dashboard Render > New Web Service > Connect repo
-#   - Railway (free): `railway login` lalu `railway up` dari folder ini
-#   - Fly.io: `fly auth login` lalu `fly launch` > `fly deploy`
-#   - VPS: install uvicorn/gunicorn, jalankan `python server.py`
-#
-# Dependency:
-#   pip install -r requirements.txt
+#   - Railway (free): railway login lalu railway up dari folder ini
+#   - Fly.io: fly auth login lalu fly launch > fly deploy
+#   - VPS: jalankan python server.py
+
 import os
-import re
-import uuid
+import time
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
 # ---------------- Konfigurasi ----------------
-# Ganti ke environmental variable kalau punya API key
-AI_PROVIDER = os.getenv("AI_PROVIDER", "demo")  # demo | groq | ollama | hf | openai
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")  # Ollama base URL
-HF_TOKEN = os.getenv("HF_TOKEN", "")  # Hugging Face token (set via environment)
+AI_PROVIDER = os.getenv("AI_PROVIDER", "groq")  # groq | ollama | hf | openai
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+HF_TOKEN = os.getenv("HF_TOKEN", "")
 HF_MODEL = os.getenv("HF_MODEL", "mistralai/Mistral-7B-Instruct-v0.3")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # API key provider AI (Groq, OpenAI, dsb)
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # API key provider AI (Groq, OpenAI)
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "llama-3.3-70b-versatile")
 
-# Rate limit: maksimal N request per user per 60 detik
 RATE_LIMIT = 5
 rate_log = {}  # user -> list of timestamps
 
-
 # ---------------- CORS Headers ----------------
-# Biar frontend (GitHub Pages) bisa panggil API ini tanpa error CORS
 @app.after_request
 def add_cors_headers(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
@@ -50,19 +41,11 @@ def add_cors_headers(response):
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
     return response
 
-
+# ---------------- AI Reply Logic ----------------
 def get_ai_reply(user_message: str) -> str:
-    """
-    Return balasan dari AI.
-
-    Template default: mode "demo" (sama seperti sekarang).
-    Ganti isinya sesuai provider kamu.
-    """
     msg = user_message.lower().strip()
 
-    # ==============================
-    # 1. RESERVED RULES (jika ada)
-    # ==============================
+    # ---------- Reserved rules ----------
     if any(k in msg for k in ["halo", "hi", "hai", "helo", "hallo"]):
         return "Halo! 👋 Ada yang bisa saya bantu hari ini?"
     if "layanan" in msg or "service" in msg:
@@ -82,12 +65,35 @@ def get_ai_reply(user_message: str) -> str:
     if "saya ingin" in msg or "ingin" in msg:
         return "Baik! Kalau aplikasi/bisnis, langkah pertama: konsultasi → proposal → development → deployment & support. Mau dibahas bagian mana?"
 
-    # ==============================
-    # 2. PROVIDER AI (jika user menembang lebih bebas)
-    # ==============================
-    provider = AI_PROVIDER
+    # ---------- Groq AI ----------
+    if AI_PROVIDER == "groq":
+        if not OPENAI_API_KEY:
+            return "Konfigurasikan OPENAI_API_KEY (Groq API key) di environment dulu."
+        try:
+            import requests as rq
+            r = rq.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENAI_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": OPENAI_MODEL,
+                    "messages": [{"role": "user", "content": user_message}],
+                    "max_tokens": 200,
+                },
+                timeout=30,
+            )
+            if r.status_code == 200:
+                data = r.json()
+                return data.get("choices", [{}])[0].get("message", {}).get("content", "Maaf, AI sedang bermasalah.")
+            else:
+                return f"Maaf, server Groq balas error ({r.status_code})."
+        except Exception as e:
+            return f"Maaf, error koneksi ke Groq: {e}"
 
-    if provider == "ollama":
+    # ---------- Ollama AI ----------
+    if AI_PROVIDER == "ollama":
         try:
             import requests as rq
             r = rq.post(
@@ -102,14 +108,17 @@ def get_ai_reply(user_message: str) -> str:
             if r.status_code == 200:
                 data = r.json()
                 return data.get("message", {}).get("content", "Maaf, AI sedang bermasalah.")
+            else:
+                return f"Maaf, server Ollama balas error ({r.status_code})."
         except Exception as e:
             return f"Maaf, error koneksi ke Ollama: {e}"
 
-    if provider == "hf":
+    # ---------- Hugging Face AI ----------
+    if AI_PROVIDER == "hf":
+        if not HF_TOKEN:
+            return "Konfigurasikan HF_TOKEN di environment/API key dulu."
         try:
             import requests as rq
-            if not HF_TOKEN:
-                return "Konfigurasikan HF_TOKEN di environment/API key dulu."
             r = rq.post(
                 "https://api-inference.huggingface.co/models/" + HF_MODEL,
                 headers={"Authorization": f"Bearer {HF_TOKEN}"},
@@ -121,10 +130,15 @@ def get_ai_reply(user_message: str) -> str:
                 if isinstance(data, list):
                     data = " ".join(d.get("generated_text", "") for d in data if d.get("generated_text"))
                 return data or "Maaf, AI sedang bermasalah."
+            else:
+                return f"Maaf, server HF balas error ({r.status_code})."
         except Exception as e:
             return f"Maaf, error koneksi ke Hugging Face: {e}"
 
-    if provider == "openai":
+    # ---------- OpenAI / Groq (OpenAI-compatible) ----------
+    if AI_PROVIDER == "openai":
+        if not OPENAI_API_KEY:
+            return "Konfigurasikan OPENAI_API_KEY di environment dulu."
         try:
             import requests as rq
             r = rq.post(
@@ -143,43 +157,18 @@ def get_ai_reply(user_message: str) -> str:
             if r.status_code == 200:
                 data = r.json()
                 return data.get("choices", [{}])[0].get("message", {}).get("content", "Maaf, AI sedang bermasalah.")
+            else:
+                return f"Maaf, server OpenAI balas error ({r.status_code})."
         except Exception as e:
             return f"Maaf, error koneksi ke OpenAI: {e}"
 
-    # Groq: Gratis, cepat, OpenAI-compatible API
-    if provider == "groq":
-        try:
-            import requests as rq
-            r = rq.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {OPENAI_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": os.getenv("OPENAI_MODEL", "llama-3.3-70b-versatile"),
-                    "messages": [{"role": "user", "content": user_message}],
-                    "max_tokens": 200,
-                },
-                timeout=30,
-            )
-            if r.status_code == 200:
-                data = r.json()
-                return data.get("choices", [{}])[0].get("message", {}).get("content", "Maaf, AI sedang bermasalah.")
-        except Exception as e:
-            return f"Maaf, error koneksi ke Groq: {e}"
-
-    # ==============================
-    # 3. DEFAULT: DUMMY TEXT
-    # ==============================
-    return "Maaf, saya masih belajar. Coba tanya: layanan, kontak, jam, atau harga. 😊"
-
+    # ---------- Default fallback ----------
+    return "Maaf, saya belum paham. Coba tanya: layanan, kontak, jam, atau harga. 😊"
 
 # ---------------- API Routes ----------------
 @app.route("/")
 def index():
     return jsonify({"status": "ok", "message": "Nusrava AI API is running. POST to /chat"})
-
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -190,8 +179,8 @@ def chat():
     if not user_message:
         return jsonify({"reply": "Kirim pesan dulu, ya. Bikin kalian nggak kosong."}), 400
 
-    # ---------------- Rate limiting ----------------
-    now = __import__("time").time()
+    # ---------- Rate limiting ----------
+    now = time.time()
     if user_id not in rate_log:
         rate_log[user_id] = []
     rate_log[user_id] = [t for t in rate_log[user_id] if now - t < 60]
@@ -199,7 +188,7 @@ def chat():
         return jsonify({"reply": "Terlalu banyak, masak. Tunggu sebentar ya, kemaren. ⏳"}), 429
     rate_log[user_id].append(now)
 
-    # ---------------- AI call ----------------
+    # ---------- AI call ----------
     reply = get_ai_reply(user_message)
 
     return jsonify({
@@ -207,7 +196,6 @@ def chat():
         "role": "bot",
         "timestamp": now,
     })
-
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
