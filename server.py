@@ -41,6 +41,16 @@ RATE_LIMIT = 5
 rate_log = {}  # user -> list of timestamps
 
 
+# ---------------- CORS Headers ----------------
+# Biar frontend (GitHub Pages) bisa panggil API ini tanpa error CORS
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    return response
+
+
 def get_ai_reply(user_message: str) -> str:
     """
     Return balasan dari AI.
