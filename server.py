@@ -45,6 +45,28 @@ def add_cors_headers(response):
 def get_ai_reply(user_message: str) -> str:
     msg = user_message.lower().strip()
 
+    # ---------- Reserved rules ----------
+    if any(k in msg for k in ["halo", "hi", "hai", "helo", "hallo"]):
+        return "Halo! 👋 Ada yang bisa saya bantu hari ini?"
+    if "layanan" in msg or "service" in msg:
+        return "Kami punya 6 layanan: website, aplikasi, jaringan, servis komputer, sistem parkir, dan sistem antrian. Mau dibahas salah satunya?"
+    if "kontak" in msg or "whatsapp" in msg or "telepon" in msg or "info" in msg:
+        return "WhatsApp: 0822-3388-3288. Atau chat langsung ke saya! 📲"
+    if "harga" in msg or "biaya" in msg:
+        return "Harga solusi solusi bervariasi tergantung kebutuhan Anda. Hubungi via WhatsApp biar bisa diskusikan detailnya. 🏷️"
+    if "terima kasih" in msg or "makasih" in msg or "thanks" in msg or "thank you" in msg:
+        return "Sama-sama! 🙏 Ada yang lain?"
+    if "jam" in msg or "buka" in msg or "tutup" in msg:
+        return "Jam operasi: Senin–Jumat, 08.00–17.00 WIB. 📅"
+    if "kantor" in msg or "alamat" in msg:
+        return "Kantor kami di Surabaya, Jawa Timur, Indonesia."
+    if "nusrava" in msg and ("siapa" in msg or "who" in msg or "dimiliki" in msg or "punya" in msg or "owner" in msg or "pendiri" in msg or "founder" in msg):
+        return "Nusrava milik Henry Warokka — IT Professional. 🎯"
+    if "apakah" in msg or "apa" in msg:
+        return "Mau kita bahas layanan, kontak, jam operasi, atau struktur project-nya? Silakan tanya lagi."
+    if "saya ingin" in msg or "ingin" in msg:
+        return "Baik! Kalau aplikasi/bisnis, langkah pertama: konsultasi → proposal → development → deployment & support. Mau dibahas bagian mana?"
+
     # ---------- Groq AI ----------
     if AI_PROVIDER == "groq":
         if not OPENAI_API_KEY:
@@ -58,16 +80,16 @@ def get_ai_reply(user_message: str) -> str:
                     "Content-Type": "application/json",
                 },
                 json={
-    "model": OPENAI_MODEL,
-    "messages": [
-        {
-            "role": "system",
-            "content": "Anda adalah asisten PT Nusrava AI dalam bahasa Indonesia yang santai dan jujur. Jawab dengan singkat, jelas, dan sesuai konteks Indonesia."
-        },
-        {"role": "user", "content": user_message}
-    ],
-    "max_tokens": 200,
-},
+                    "model": OPENAI_MODEL,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "Anda adalah asisten PT Nusrava AI dalam bahasa Indonesia yang santai dan jujur. Jawab dengan singkat, jelas, dan sesuai konteks Indonesia."
+                        },
+                        {"role": "user", "content": user_message}
+                    ],
+                    "max_tokens": 200,
+                },
                 timeout=30,
             )
             if r.status_code == 200:
@@ -135,7 +157,13 @@ def get_ai_reply(user_message: str) -> str:
                 },
                 json={
                     "model": OPENAI_MODEL,
-                    "messages": [{"role": "user", "content": user_message}],
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "Anda adalah asisten PT Nusrava AI dalam bahasa Indonesia yang santai dan jujur. Jawab dengan singkat, jelas, dan sesuai konteks Indonesia."
+                        },
+                        {"role": "user", "content": user_message}
+                    ],
                     "max_tokens": 200,
                 },
                 timeout=30,
