@@ -1,27 +1,25 @@
-"""
-Nusrava AI Chat API
-Endpoint: /chat
-
-Cara kerja:
-- POST /chat  { "message": "helo", "user": "nama-orang" }
-- Balasan dalam JSON: { "reply": "...", "role": "bot" }
-
-Integrasi AI:
-- Ganti fungsi `get_ai_reply()` dengan provider AI kamu.
-- Contoh provider yang bisa dipakai:
-  1. Ollama (lokal) — no API key, jalankan `ollama serve` dulu
-  2. Hugging Face Inference API — gratis, minta token di huggingface.co
-  3. OpenAI / Groq / dsb — minta API key
-
-Cara deploy (pilih salah satu):
-  - Render (free): dashboard Render > New Web Service > Connect repo
-  - Railway (free): `railway login` lalu `railway up` dari folder ini
-  - Fly.io: `fly auth login` lalu `fly launch` > `fly deploy`
-  - VPS: install uvicorn/gunicorn, jalankan `python server.py`
-
-Dependency:
-  pip install -r requirements.txt
-"""
+# Nusrava AI Chat API
+# Endpoint: /chat
+#
+# Cara kerja:
+# - POST /chat  { "message": "helo", "user": "nama-orang" }
+# - Balasan dalam JSON: { "reply": "...", "role": "bot" }
+#
+# Integrasi AI:
+# - Ganti fungsi `get_ai_reply()` dengan provider AI kamu.
+# - Contoh provider yang bisa dipakai:
+#   1. Ollama (lokal) — no API key, jalankan `ollama serve` dulu
+#   2. Hugging Face Inference API — gratis, minta token di huggingface.co
+#   3. OpenAI / Groq / dsb — minta API key
+#
+# Cara deploy (pilih salah satu):
+#   - Render (free): dashboard Render > New Web Service > Connect repo
+#   - Railway (free): `railway login` lalu `railway up` dari folder ini
+#   - Fly.io: `fly auth login` lalu `fly launch` > `fly deploy`
+#   - VPS: install uvicorn/gunicorn, jalankan `python server.py`
+#
+# Dependency:
+#   pip install -r requirements.txt
 import os
 import re
 import uuid
@@ -31,11 +29,11 @@ app = Flask(__name__)
 
 # ---------------- Konfigurasi ----------------
 # Ganti ke environmental variable kalau punya API key
-AI_PROVIDER = os.getenv("AI_PROVIDER", "demo")  # demo | ollama | hf | openai
+AI_PROVIDER = os.getenv("AI_PROVIDER", "demo")  # demo | groq | ollama | hf | openai
 HF_TOKEN = os.getenv("HF_TOKEN", "")  # Hugging Face token (set via environment)
 HF_MODEL = os.getenv("HF_MODEL", "mistralai/Mistral-7B-Instruct-v0.3")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # API key provider AI (Groq, OpenAI, dsb)
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "llama-3.3-70b-versatile")
 
 # Rate limit: maksimal N request per user per 60 detik
 RATE_LIMIT = 5
@@ -136,6 +134,29 @@ def get_ai_reply(user_message: str) -> str:
                 return data.get("choices", [{}])[0].get("message", {}).get("content", "Maaf, AI sedang bermasalah.")
         except Exception as e:
             return f"Maaf, error koneksi ke OpenAI: {e}"
+
+    # Groq: Gratis, cepat, OpenAI-compatible API
+    if provider == "groq":
+        try:
+            import requests as rq
+            r = rq.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENAI_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": os.getenv("OPENAI_MODEL", "llama-3.3-70b-versatile"),
+                    "messages": [{"role": "user", "content": user_message}],
+                    "max_tokens": 200,
+                },
+                timeout=30,
+            )
+            if r.status_code == 200:
+                data = r.json()
+                return data.get("choices", [{}])[0].get("message", {}).get("content", "Maaf, AI sedang bermasalah.")
+        except Exception as e:
+            return f"Maaf, error koneksi ke Groq: {e}"
 
     # ==============================
     # 3. DEFAULT: DUMMY TEXT
