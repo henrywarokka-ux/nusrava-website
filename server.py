@@ -30,6 +30,7 @@ app = Flask(__name__)
 # ---------------- Konfigurasi ----------------
 # Ganti ke environmental variable kalau punya API key
 AI_PROVIDER = os.getenv("AI_PROVIDER", "demo")  # demo | groq | ollama | hf | openai
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")  # Ollama base URL
 HF_TOKEN = os.getenv("HF_TOKEN", "")  # Hugging Face token (set via environment)
 HF_MODEL = os.getenv("HF_MODEL", "mistralai/Mistral-7B-Instruct-v0.3")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # API key provider AI (Groq, OpenAI, dsb)
